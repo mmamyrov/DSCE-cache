@@ -47,21 +47,30 @@ def main() -> None:
 
     options = webdriver.ChromeOptions()
     options.add_argument("--proxy-server={}".format(client.proxy))
+    # options.add_argument("--headless")
     options.set_capability('applicationCacheEnabled', True)
+    options.set_capability('acceptSslCerts', True)
 
     service = ChromeService(executable_path=ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
 
-    driver.get("https://www.google.com")
+    site = "https://github.com/AutomatedTester/browsermob-proxy-py"
+
+    driver.get(site)
     time.sleep(2)
 
-    driver.get("https://www.google.com")
+    driver.get(site)
     time.sleep(3)
 
     pprint.pprint(client.har)
 
     server.stop()
+    # while True:
+    #     pass
     driver.quit()
+
+# https://github.com/janodvarko/harviewer/blob/579969c6bb5537e0ddb358c6a273325eed16fe18/webapp/scripts/preview/harModel.js#L352
+# could use the definition of cacheEntry similar to how HarViewer implements it
 
 
 
