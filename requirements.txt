@@ -1,0 +1,6 @@
+webdriver-manager
+selenium
+selenium-wire
+browsermob-proxy
+haralyzer
+psutil
