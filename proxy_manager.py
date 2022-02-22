@@ -1,12 +1,16 @@
 import time
 import psutil
 import pprint
+import json
+
 from browsermobproxy.client import Client as BMPClient
 from browsermobproxy.server import Server as BMPServer
 
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.devtools import DevTools
+
 
 
 class BMPProxyManager:
@@ -37,16 +41,37 @@ class BMPProxyManager:
     def server(self):
         return self.__server
 
+class Har:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def isCacheEntry(entry):
+        if entry.response.status == 304:
+            return True
+
+        resBodySize = max(0, entry.response.bodySize)
+        return resBodySize == 0 and entry.response.content and entry.response.content.size > 0
+
+
 
 
 def main() -> None:
     proxy = BMPProxyManager()
     server = proxy.start_server()
     client = proxy.start_client()
-    client.new_har("google")
+    capture_options = {
+        "captureHeaders": True,
+        "captureContent": True,
+        "captureBinaryContent": True
+    }
+
+    client.new_har("google", options=capture_options)
 
     options = webdriver.ChromeOptions()
     options.add_argument("--proxy-server={}".format(client.proxy))
+    options.add_argument("user-data-dir=/Users/medetm/Library/Application Support/Google/Chrome/Profile 1")
+
     # options.add_argument("--headless")
     options.set_capability('applicationCacheEnabled', True)
     options.set_capability('acceptSslCerts', True)
@@ -61,8 +86,10 @@ def main() -> None:
 
     driver.get(site)
     time.sleep(3)
+    # pprint.pprint(client.har)
 
-    pprint.pprint(client.har)
+    with open('out.har', 'w') as har_file:
+        json.dump(client.har, har_file)
 
     server.stop()
     # while True:
