@@ -22,6 +22,9 @@ echo "Starting the har file generation for sites listed in har-cli.inpu"
 echo "Output file is 50-site-2-accesses.har"
 echo "==============================================="
 
-xargs npx chrome-har-capturer --cache --port $PORT --retry 0 --grace 2500 -o 50-site-2-accesses.har < har-cli.input
+let grace=30*1000
+let timeout=60*1000
+
+xargs npx chrome-har-capturer --cache --port $PORT --retry 3 --grace $grace --timeout $timeout -o test.har < har-cli.input
 
 kill $CHROME_PID
