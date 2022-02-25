@@ -52,7 +52,7 @@ def interceptor(request,response):
 if __name__ == "__main__":
 	# setting the driver's response_interceptor to equal
 	# the customised interceptor
-	# driver.response_interceptor = interceptor
+	driver.response_interceptor = interceptor
 	sites=["www.spotify.com"]
 	for site in sites:
 		for x in range(2):
