@@ -5,3 +5,4 @@ browsermob-proxy
 haralyzer
 psutil
 pandas
+tqdm
