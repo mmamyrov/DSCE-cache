@@ -4,3 +4,4 @@ selenium-wire
 browsermob-proxy
 haralyzer
 psutil
+pandas
