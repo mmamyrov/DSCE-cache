@@ -1,0 +1,4 @@
+53 * * 3 * /bin/bash ~/Comp_Sci/DSCE-cache/get_har.sh "Profile 2" 9222 60
+0 */2 * 3 * /bin/bash ~/Comp_Sci/DSCE-cache/get_har.sh "Profile 3" 9223 120
+0 */3 * 3 * /bin/bash ~/Comp_Sci/DSCE-cache/get_har.sh "Profile 4" 9224 180
+

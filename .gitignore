@@ -1,0 +1,2 @@
+data/50-site-metrics-*.har
+**/node_modules
