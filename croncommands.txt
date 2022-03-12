@@ -1,4 +1,12 @@
+# For Medet's macOS
 53 * * 3 * /bin/bash ~/Comp_Sci/DSCE-cache/get_har.sh "Profile 2" 9222 60
 0 */2 * 3 * /bin/bash ~/Comp_Sci/DSCE-cache/get_har.sh "Profile 3" 9223 120
 0 */3 * 3 * /bin/bash ~/Comp_Sci/DSCE-cache/get_har.sh "Profile 4" 9224 180
+
+# For Medet's linux pc
+45 * * 3 * /bin/bash ~/Comp_Sci/DSCE-cache/get_har.sh "Profile 1" 9222 60
+0 */3 * 3 * /bin/bash ~/Comp_Sci/DSCE-cache/get_har.sh "Profile 2" 9223 180
+0 */6 * 3 * /bin/bash ~/Comp_Sci/DSCE-cache/get_har.sh "Profile 3" 9224 360
+0 */8 * 3 * /bin/bash ~/Comp_Sci/DSCE-cache/get_har.sh "Profile 4" 9225 540
+0 */12 * 3 * /bin/bash ~/Comp_Sci/DSCE-cache/get_har.sh "Profile 5" 9226 720
 

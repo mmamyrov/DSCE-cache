@@ -13,6 +13,13 @@ fi
 
 # alias chrome
 chrome="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
+# The chrome app location is different on linux. Just use the cli command
+if [[ "$OSTYPE" == "linux-gnu"* ]];
+then
+  chrome="google-chrome"
+fi
+
 # start headless chrome from the cli
 SLEEP_TIME=10
 PROFILE=$1
@@ -42,7 +49,8 @@ let grace=30*1000
 let timeout=60*1000
 
 export PATH="/usr/local/bin:${PATH}"
+export PATH="/home/medet/.nvm:/usr/bin:${PATH}"
 
-xargs /usr/local/bin/npx chrome-har-capturer --cache --port $PORT --retry 3 --grace $grace --timeout $timeout -o $OUTPUT_HAR < inputs/new_sites.input
+xargs npx chrome-har-capturer --cache --port $PORT --retry 3 --grace $grace --timeout $timeout -o $OUTPUT_HAR < inputs/final_sites.input
 
 kill $CHROME_PID
