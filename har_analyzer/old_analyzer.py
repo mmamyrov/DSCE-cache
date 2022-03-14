@@ -33,13 +33,13 @@ def main(args):
 
 
     ### create the two dataframes: (1) pages, (2) entries
-    pages_df = pd.DataFrame(columns=['url', 'cacheTransferSize', '_transferSize', 'totalTransferSize', 'cacheCount', 'pageEntries', 'cacheability', 'cacheOverTotal'])
+    pages_df = pd.DataFrame(columns=['url', 'cacheTransferSize', '_transferSize', 'cacheCount', 'pageEntries', 'cacheability'])
     """url --> str, cacheTransferSize --> int, _transferSize --> int,
     cacheCount --> int, pageEntries --> int, cacheability --> float <= 1.0"""
 
     pages_df = pages_df.astype({ 'url': 'string', 'cacheTransferSize': 'int64',
-        '_transferSize': 'int64', 'totalTransferSize': 'int64', 'cacheCount': 'int64', 'pageEntries': 'int64',
-        'cacheability': 'float64', 'cacheOverTotal': 'float64' })
+        '_transferSize': 'int64', 'cacheCount': 'int64', 'pageEntries': 'int64',
+        'cacheability': 'float64' })
     pages_df.set_index('url', inplace=True)
 
     entries_df = pd.DataFrame(columns=['url', '_transferSize', 'fromCache',
@@ -124,15 +124,10 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
                     entryTfSize = entries_df.at[entryUrl, '_transferSize']
                     pageCacheTransferSize += entryTfSize
 
-            # Store entry info in dataframe
+            # Store entry info in datafram
             if entryUrl in entries_df.index:
                 # entry exists in df, override previous record
-                if _transferSize > 0:
-                    # if transferSize is greater than 0, then it just came over the network
-                    # and the record needs to be updated with latest info
-                    entries_df.at[entryUrl, '_transferSize'] = _transferSize
-                    entries_df.at[entryUrl, 'totalTransferSize'] += _transferSize
-
+                entries_df.at[entryUrl, '_transferSize'] += _transferSize
                 entries_df.at[entryUrl, 'fromCache'] = fromCache
                 entries_df.at[entryUrl, 'statusCode'] = entryStatusCode
                 entries_df.at[entryUrl, 'maxAge'] = maxAge
@@ -140,9 +135,8 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
             else:
                 # entry doesn't exist in df. Append it
                 entry_dict = {
-                    'url': entryUrl,
-                    '_transferSize': _transferSize,
-                    'totalTransferSize': _transferSize,
+                    'url': [entryUrl],
+                    '_transferSize': [_transferSize],
                     'fromCache': fromCache,
                     'statusCode': entryStatusCode,
                     'maxAge': maxAge,
@@ -158,26 +152,18 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
 
         ### Store page info in pandas
         if pageUrl in pages_df.index:
-            temp_pagedf = pd.DataFrame(pages_df.loc[[pageUrl]])
-            # print('temp page dataframe ', temp_pagedf)
-            # get the last instance of page information stored in the pages_df
-            temp_pagedf = temp_pagedf.iloc[[-1]].copy()
 
             # index row already exists, so just update it
-            temp_pagedf.at[pageUrl, 'cacheTransferSize'] += pageCacheTransferSize
-            temp_pagedf.at[pageUrl, '_transferSize'] += pageTransferSize
-            temp_pagedf.at[pageUrl, 'cacheCount'] += fromCacheCount
-            temp_pagedf.at[pageUrl, 'pageEntries'] += entriesCount
+            pages_df.at[pageUrl, 'cacheTransferSize'] += pageCacheTransferSize
+            pages_df.at[pageUrl, '_transferSize'] += pageTransferSize
+            pages_df.at[pageUrl, 'cacheCount'] += fromCacheCount
+            pages_df.at[pageUrl, 'pageEntries'] += entriesCount
 
-            cacheTfSize = temp_pagedf.at[pageUrl, 'cacheTransferSize']
-            tfSize = temp_pagedf.at[pageUrl, '_transferSize']
+            cacheTfSize = pages_df.at[pageUrl, 'cacheTransferSize']
+            tfSize = pages_df.at[pageUrl, '_transferSize']
 
             if tfSize > 0.0:
-                temp_pagedf.at[pageUrl, 'cacheability'] =  cacheTfSize / tfSize
-                temp_pagedf.at[pageUrl, 'cacheOverTotal'] =  cacheTfSize / (cacheTfSize + tfSize)
-
-            pages_df = pd.concat([pages_df, temp_pagedf], ignore_index=False)
-            # print(pages_df.loc[[pageUrl]].tail())
+                pages_df.at[pageUrl, 'cacheability'] =  cacheTfSize / tfSize
         else:
             # create a new index row with the requested url
             page_dict = {
@@ -187,12 +173,10 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
                 'cacheCount': [fromCacheCount],
                 'pageEntries': [entriesCount],
                 'cacheability': [0.0],
-                'cacheOverTotal': [0.0],
             }
 
             if pageTransferSize > 0.0 and pageCacheTransferSize > 0.0:
                 page_dict['cacheability'] = pageCacheTransferSize / pageTransferSize
-                page_dict['cacheOverTotal'] = pageCacheTransferSize / (pageCacheTransferSize + pageTransferSize)
 
             ### Append the page to the df
             temp_pagedf = pd.DataFrame(page_dict)

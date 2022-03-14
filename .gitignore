@@ -3,3 +3,4 @@ data/50-site-metrics-*.har
 **/.DS_Store
 data/dirty/*
 DSCE-env/*
+test_results/*
