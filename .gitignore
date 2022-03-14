@@ -5,3 +5,4 @@ data/dirty/*
 data/extra/*
 DSCE-env/*
 test_results/*
+test_data/*

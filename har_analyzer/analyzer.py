@@ -33,24 +33,26 @@ def main(args):
 
 
     ### create the two dataframes: (1) pages, (2) entries
-    pages_df = pd.DataFrame(columns=['url', 'onContentLoad', 'onLoad', 'cacheTransferSize',
-        '_transferSize', 'totalTransferSize', 'cacheCount', 'pageEntries', 'cacheability', 'cacheOverTotal'])
-    """url --> str, cacheTransferSize --> int, _transferSize --> int,
+    pages_df = pd.DataFrame(columns=['url', 'onContentLoad', 'onLoad', 'cumCacheTransferSize',
+        'cumTransferSize', 'cacheTransferSize', '_transferSize', 'cumCacheCount', 'cumPageEntries',
+        'cacheCount', 'pageEntries', 'cacheability', 'cacheOverTotal'])
+    """url --> str, cumCacheTransferSize --> int, _transferSize --> int,
     cacheCount --> int, pageEntries --> int, cacheability --> float <= 1.0"""
 
     pages_df = pages_df.astype({ 'url': 'string', 'onContentLoad': 'float64', 'onLoad': 'float64',
-        'cacheTransferSize': 'int64', '_transferSize': 'int64', 'totalTransferSize': 'int64',
-        'cacheCount': 'int64', 'pageEntries': 'int64', 'cacheability': 'float64',
-        'cacheOverTotal': 'float64' })
+        'cumCacheTransferSize': 'int64', 'cumTransferSize': 'int64', 'cacheTransferSize': 'int64', '_transferSize': 'int64',
+        'cumCacheCount': 'int64', 'cumPageEntries': 'int64', 'cacheCount': 'int64',
+        'pageEntries': 'int64', 'cacheability': 'float64', 'cacheOverTotal': 'float64' })
     pages_df.set_index('url', inplace=True)
 
-    entries_df = pd.DataFrame(columns=['url', '_transferSize', 'fromCache',
+    entries_df = pd.DataFrame(columns=['url', '_transferSize', 'cumTransferSize', 'fromCache',
         'statusCode', 'maxAge', 'cacheControl'])
     """url --> str, _transferSize --> int, fromCache --> bool, statusCode --> int,
     maxAge --> int, cacheControl --> object (set)"""
 
-    entries_df = entries_df.astype({ 'url': 'string', '_transferSize': 'int64', 'fromCache': 'boolean',
-        'statusCode': 'int64', 'maxAge': 'int64', 'cacheControl': 'object' })
+    entries_df = entries_df.astype({ 'url': 'string', '_transferSize': 'int64',
+        'cumTransferSize': 'int64', 'fromCache': 'boolean', 'statusCode': 'int64',
+        'maxAge': 'int64', 'cacheControl': 'object' })
     entries_df.set_index('url', inplace=True)
 
     print('dtypes', entries_df.dtypes)
@@ -137,7 +139,7 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
                     # if transferSize is greater than 0, then it just came over the network
                     # and the record needs to be updated with latest info
                     entries_df.at[entryUrl, '_transferSize'] = _transferSize
-                    entries_df.at[entryUrl, 'totalTransferSize'] += _transferSize
+                    entries_df.at[entryUrl, 'cumTransferSize'] += _transferSize
 
                 entries_df.at[entryUrl, 'fromCache'] = fromCache
                 entries_df.at[entryUrl, 'statusCode'] = entryStatusCode
@@ -148,7 +150,7 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
                 entry_dict = {
                     'url': [entryUrl],
                     '_transferSize': [_transferSize],
-                    'totalTransferSize': [_transferSize],
+                    'cumTransferSize': [_transferSize],
                     'fromCache': [fromCache],
                     'statusCode': [entryStatusCode],
                     'maxAge': [maxAge],
@@ -172,17 +174,30 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
             temp_pagedf.at[pageUrl, 'onContentLoad'] = pageTimings['onContentLoad']
             temp_pagedf.at[pageUrl, 'onLoad'] = pageTimings['onLoad']
 
-            temp_pagedf.at[pageUrl, 'cacheTransferSize'] += pageCacheTransferSize
-            temp_pagedf.at[pageUrl, '_transferSize'] += pageTransferSize
-            temp_pagedf.at[pageUrl, 'cacheCount'] += fromCacheCount
-            temp_pagedf.at[pageUrl, 'pageEntries'] += entriesCount
+            temp_pagedf.at[pageUrl, 'cumCacheTransferSize'] += pageCacheTransferSize
+            temp_pagedf.at[pageUrl, 'cumTransferSize'] += pageTransferSize
 
-            cacheTfSize = temp_pagedf.at[pageUrl, 'cacheTransferSize']
-            tfSize = temp_pagedf.at[pageUrl, '_transferSize']
+            temp_pagedf.at[pageUrl, 'cacheTransferSize'] = pageCacheTransferSize
+            temp_pagedf.at[pageUrl, '_transferSize'] = pageTransferSize
 
-            if tfSize > 0.0:
-                temp_pagedf.at[pageUrl, 'cacheability'] =  cacheTfSize / tfSize
-                temp_pagedf.at[pageUrl, 'cacheOverTotal'] =  cacheTfSize / (cacheTfSize + tfSize)
+            temp_pagedf.at[pageUrl, 'cumCacheCount'] += fromCacheCount
+            temp_pagedf.at[pageUrl, 'cumPageEntries'] += entriesCount
+
+            temp_pagedf.at[pageUrl, 'cacheCount'] = fromCacheCount
+            temp_pagedf.at[pageUrl, 'pageEntries'] = entriesCount
+
+            # cacheTfSize = temp_pagedf.at[pageUrl, 'cacheTransferSize']
+            # tfSize = temp_pagedf.at[pageUrl, '_transferSize']
+
+            # in case pageTransferSize == 0, then set it to one to get the ratio
+            temp_pagedf.at[pageUrl, 'cacheability'] = pageCacheTransferSize / 1
+            temp_pagedf.at[pageUrl, 'cacheOverTotal'] = 0.0
+
+            if pageTransferSize > 0.0:
+                temp_pagedf.at[pageUrl, 'cacheability'] = pageCacheTransferSize / pageTransferSize
+
+            if pageCacheTransferSize > 0.0:
+                temp_pagedf.at[pageUrl, 'cacheOverTotal'] = pageCacheTransferSize / (pageCacheTransferSize + pageTransferSize)
 
             pages_df = pd.concat([pages_df, temp_pagedf], ignore_index=False)
             # print(pages_df.loc[[pageUrl]].tail())
@@ -192,8 +207,12 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
                 'url': [pageUrl],
                 'onContentLoad': [pageTimings['onContentLoad']],
                 'onLoad': [pageTimings['onLoad']],
+                'cumCacheTransferSize': [pageCacheTransferSize],
+                'cumTransferSize': [pageTransferSize],
                 'cacheTransferSize': [pageCacheTransferSize],
                 '_transferSize': [pageTransferSize],
+                'cumCacheCount': [fromCacheCount],
+                'cumPageEntries': [entriesCount],
                 'cacheCount': [fromCacheCount],
                 'pageEntries': [entriesCount],
                 'cacheability': [0.0],
@@ -202,6 +221,8 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
 
             if pageTransferSize > 0.0 and pageCacheTransferSize > 0.0:
                 page_dict['cacheability'] = pageCacheTransferSize / pageTransferSize
+
+            if pageCacheTransferSize > 0.0:
                 page_dict['cacheOverTotal'] = pageCacheTransferSize / (pageCacheTransferSize + pageTransferSize)
 
             ### Append the page to the df
