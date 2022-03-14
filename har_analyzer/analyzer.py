@@ -67,7 +67,7 @@ def main(args):
     # print(entries_df[entries_df['fromCache'] == True].tail(10))
 
     # Save the results of pages and entries dataframes as CSV files
-    results_dir = 'test_results'
+    results_dir = 'results'
     pages_result_file = f'../{results_dir}/pages_analysis_{r_interval}.csv'
     entries_result_file = f'../{results_dir}/entries_analysis_{r_interval}.csv'
 
