@@ -33,13 +33,15 @@ def main(args):
 
 
     ### create the two dataframes: (1) pages, (2) entries
-    pages_df = pd.DataFrame(columns=['url', 'cacheTransferSize', '_transferSize', 'totalTransferSize', 'cacheCount', 'pageEntries', 'cacheability', 'cacheOverTotal'])
+    pages_df = pd.DataFrame(columns=['url', 'onContentLoad', 'onLoad', 'cacheTransferSize',
+        '_transferSize', 'totalTransferSize', 'cacheCount', 'pageEntries', 'cacheability', 'cacheOverTotal'])
     """url --> str, cacheTransferSize --> int, _transferSize --> int,
     cacheCount --> int, pageEntries --> int, cacheability --> float <= 1.0"""
 
-    pages_df = pages_df.astype({ 'url': 'string', 'cacheTransferSize': 'int64',
-        '_transferSize': 'int64', 'totalTransferSize': 'int64', 'cacheCount': 'int64', 'pageEntries': 'int64',
-        'cacheability': 'float64', 'cacheOverTotal': 'float64' })
+    pages_df = pages_df.astype({ 'url': 'string', 'onContentLoad': 'float64', 'onLoad': 'float64',
+        'cacheTransferSize': 'int64', '_transferSize': 'int64', 'totalTransferSize': 'int64',
+        'cacheCount': 'int64', 'pageEntries': 'int64', 'cacheability': 'float64',
+        'cacheOverTotal': 'float64' })
     pages_df.set_index('url', inplace=True)
 
     entries_df = pd.DataFrame(columns=['url', '_transferSize', 'fromCache',
@@ -75,7 +77,6 @@ def main(args):
     entries_df.to_csv(entries_result_file)
 
 
-
 def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) -> Tuple[DataFrame, DataFrame]:
     with open(har_file, 'r') as f:
         har_parser = HarParser(json.loads(f.read()))
@@ -83,11 +84,16 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
     for page in tqdm(har_parser.pages, leave=False):
         # init page variables
         pageUrl = page.url
+        pageTimings = page.pageTimings
+
         entriesCount = len(page.entries)
         pageTransferSize = 0
         pageCacheTransferSize = 0
         fromCacheCount = 0
 
+        # print(pageTimings)
+
+        # analyze each entry of the page
         for entry in page.entries:
             entryUrl = entry.url
             entryStatusCode = entry.response.status
@@ -140,12 +146,12 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
             else:
                 # entry doesn't exist in df. Append it
                 entry_dict = {
-                    'url': entryUrl,
-                    '_transferSize': _transferSize,
-                    'totalTransferSize': _transferSize,
-                    'fromCache': fromCache,
-                    'statusCode': entryStatusCode,
-                    'maxAge': maxAge,
+                    'url': [entryUrl],
+                    '_transferSize': [_transferSize],
+                    'totalTransferSize': [_transferSize],
+                    'fromCache': [fromCache],
+                    'statusCode': [entryStatusCode],
+                    'maxAge': [maxAge],
                     'cacheControl': [ccList]
                 }
 
@@ -158,12 +164,14 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
 
         ### Store page info in pandas
         if pageUrl in pages_df.index:
-            temp_pagedf = pd.DataFrame(pages_df.loc[[pageUrl]])
-            # print('temp page dataframe ', temp_pagedf)
             # get the last instance of page information stored in the pages_df
+            temp_pagedf = pd.DataFrame(pages_df.loc[[pageUrl]])
             temp_pagedf = temp_pagedf.iloc[[-1]].copy()
 
             # index row already exists, so just update it
+            temp_pagedf.at[pageUrl, 'onContentLoad'] = pageTimings['onContentLoad']
+            temp_pagedf.at[pageUrl, 'onLoad'] = pageTimings['onLoad']
+
             temp_pagedf.at[pageUrl, 'cacheTransferSize'] += pageCacheTransferSize
             temp_pagedf.at[pageUrl, '_transferSize'] += pageTransferSize
             temp_pagedf.at[pageUrl, 'cacheCount'] += fromCacheCount
@@ -182,6 +190,8 @@ def parse_har_file(har_file: str, pages_df: DataFrame, entries_df: DataFrame) ->
             # create a new index row with the requested url
             page_dict = {
                 'url': [pageUrl],
+                'onContentLoad': [pageTimings['onContentLoad']],
+                'onLoad': [pageTimings['onLoad']],
                 'cacheTransferSize': [pageCacheTransferSize],
                 '_transferSize': [pageTransferSize],
                 'cacheCount': [fromCacheCount],
