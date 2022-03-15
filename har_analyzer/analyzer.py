@@ -58,7 +58,7 @@ def main(args):
     print('dtypes', entries_df.dtypes)
 
     # Get all of the har_files with the specified interval
-    har_files = glob.glob(f'../data/50-site-metrics-{r_interval}-*.har')
+    har_files = glob.glob(f'../data/network-metrics-{r_interval}-*.har')
     har_files.sort()
 
     print(har_files)
